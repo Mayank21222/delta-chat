@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 
 sys.path.insert(0, ".")
 
@@ -29,6 +30,20 @@ from src.observability.tracing import Trace
 from src.pipeline import run_pipeline
 
 logger = get_logger("cli", quiet=True)
+
+
+def type_text(text: str, delay: float = 0.02) -> None:
+    """Print text character by character for a more interactive feel."""
+    for char in text:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        if char in ".!?\n":
+            time.sleep(delay * 3)
+        elif char == ",":
+            time.sleep(delay * 2)
+        else:
+            time.sleep(delay)
+    print()
 
 
 def load_pair(pair_path: str):
@@ -95,7 +110,9 @@ def interactive_chat(result):
         lines = [l.strip() for l in text.split("\n") if l.strip()]
         if lines:
             text = lines[-1] if len(lines) > 1 else lines[0]
-        print(f"\n  {text}\n")
+        print()
+        type_text(f"  {text}")
+        print()
         if answer.cited_chunk_ids:
             print(f"  Sources: {', '.join(answer.cited_chunk_ids)}")
         print(f"  Trace:   {trace_path}\n")
