@@ -1,0 +1,49 @@
+{
+  "pair_id": "export_gas_compressor_A_vs_B",
+  "provenance": "PID A is the real export-gas-compressor P&ID sheet as provided. PID B was synthesized from PID A via data/samples/synthesize_revb.py (PyMuPDF redact+reinsert) -- see that script for the exact, documented edits. This is a real document with real synthetic edits, not a fabricated example.",
+  "pid_a": {"pid": "pid-export-a", "path": "data/samples/raw/pid_export_gas_compressor_revA.pdf", "revision": "Rev A"},
+  "pid_b": {"pid": "pid-export-b", "path": "data/samples/raw/pid_export_gas_compressor_revB.pdf", "revision": "Rev B"},
+
+  "ground_truth_delta": [
+    {"change_type": "modified", "must_contain": ["225.4", "230.0"], "note": "PSV 9027B relief setpoint raised"},
+    {"change_type": "modified", "must_contain": ["214", "220"], "note": "PIT 9023 HH alarm raised"},
+    {"change_type": "removed", "must_contain": ["MECHANICAL"], "note": "interlock label removed (part 1)"},
+    {"change_type": "removed", "must_contain": ["INTERLOCK"], "note": "interlock label removed (part 2)"},
+    {"change_type": "modified", "must_contain": ["1835"], "note": "duty note line changed (old value dropped from this line)"},
+    {"change_type": "added", "must_contain": ["1902"], "note": "new duty value 1902 kW appears (see README: text-reflow split this from the modified entry above -- a real alignment limitation, not an eval bug)"},
+    {"change_type": "added", "must_contain": ["REV B", "STRAINER"], "note": "new revision note added"}
+  ],
+
+  "qa": [
+    {
+      "question": "What changed about the PSV 9027B relief valve setpoint between Rev A and Rev B?",
+      "expected_keywords": ["230.0", "225.4"],
+      "expect_citation_kind": "delta",
+      "expect_refusal": false
+    },
+    {
+      "question": "What is the high-high alarm setpoint for PIT 9023 in Rev B?",
+      "expected_keywords": ["220"],
+      "expect_citation_kind": "any",
+      "expect_refusal": false
+    },
+    {
+      "question": "Who is the vendor for the 3rd stage HP gas export compressor?",
+      "expected_keywords": ["MAN ENERGY SOLUTIONS"],
+      "expect_citation_kind": "pid",
+      "expect_refusal": false
+    },
+    {
+      "question": "Was the mechanical interlock note removed in Rev B?",
+      "expected_keywords": ["removed", "MECHANICAL"],
+      "expect_citation_kind": "delta",
+      "expect_refusal": false
+    },
+    {
+      "question": "What is the compressor's serial number?",
+      "expected_keywords": [],
+      "expect_citation_kind": "none",
+      "expect_refusal": true
+    }
+  ]
+}
