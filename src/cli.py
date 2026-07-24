@@ -68,6 +68,21 @@ def do_ingest_and_report(pair_path: str):
     return result
 
 
+def is_greeting(q: str) -> bool:
+    """Check if the input is a greeting or generic word."""
+    greetings = {"hello", "hi", "hey", "ok", "okay", "thanks", "thank you", "bye", "quit", "exit", "help", "?", "!"}
+    return q.lower().strip() in greetings
+
+
+def split_questions(text: str) -> list[str]:
+    """Split multi-question input into individual questions."""
+    # Split on question marks, newlines, or semicolons
+    import re
+    parts = re.split(r'[?\n;]+', text)
+    questions = [p.strip() for p in parts if p.strip() and p.strip() not in ("", "?")]
+    return questions if questions else [text.strip()]
+
+
 def interactive_chat(result):
     llm = get_llm_client()
     ds = load_pair("eval/datasets/export_gas_compressor_pair.json")
@@ -84,49 +99,72 @@ def interactive_chat(result):
     type_text(f"  Index: {len(result.index.chunks)} searchable chunks", delay=0.03)
     type_text(f"  LLM:   {llm.__class__.__name__}", delay=0.03)
     print()
-    type_text("  Commands: type 'quit' to exit", delay=0.03)
-    type_text("  Try asking:", delay=0.03)
-    type_text("    - What changed about the PSV 9027B relief valve?", delay=0.03)
-    type_text("    - What is the high-high alarm setpoint for PIT 9023?", delay=0.03)
-    type_text("    - Was the mechanical interlock note removed in Rev B?", delay=0.03)
+    type_text("  Commands: type 'quit' to exit, 'help' for examples", delay=0.03)
     type_text("=" * 60, delay=0.003)
     print()
+
     while True:
         try:
-            q = input(">> ").strip()
+            raw = input(">> ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
             break
-        if not q or q.lower() in ("exit", "quit"):
+        if not raw or raw.lower() in ("exit", "quit"):
             break
-        correlation_id = new_correlation_id()
-        trace = Trace(correlation_id, request_type="interactive_chat")
-        log(logger, "info", f"question: {q}", correlation_id, stage="chat")
-        try:
-            answer = ask(q, result.index, llm, trace)
-        except RuntimeError as exc:
+
+        # Handle greetings and generic words
+        if is_greeting(raw):
+            responses = {
+                "hello": "Hello! Ask me anything about the two P&ID revisions.",
+                "hi": "Hi! I can help you compare two P&ID revisions. What would you like to know?",
+                "hey": "Hey! What would you like to know about the documents?",
+                "ok": "Ready for your question.",
+                "okay": "Ready for your question.",
+                "thanks": "You're welcome! Anything else?",
+                "thank you": "You're welcome! Feel free to ask more questions.",
+                "bye": "Goodbye!",
+                "help": "Try asking:\n  - What changed about the PSV 9027B relief valve?\n  - What is the high-high alarm setpoint for PIT 9023?\n  - Was the mechanical interlock note removed in Rev B?",
+                "?": "I answer questions about two P&ID revisions. Try asking what changed between them!",
+            }
             print()
-            type_text(f"  [error] {exc}", delay=0.02)
+            type_text(f"  {responses.get(raw.lower(), 'Ready for your question.')}", delay=0.03)
             print()
-            trace.finish_and_save()
             continue
-        trace_path = trace.finish_and_save()
-        # Clean answer: extract just the meaningful part
-        text = answer.answer_text.strip()
-        # Remove redundant question echo from mock LLM answers
-        if "Question:" in text:
-            text = text.split("Question:")[0].strip()
-        # Remove raw chunk text that appears before the real answer
-        lines = [l.strip() for l in text.split("\n") if l.strip()]
-        if lines:
-            text = lines[-1] if len(lines) > 1 else lines[0]
-        print()
-        type_text(f"  {text}", delay=0.03)
-        print()
-        if answer.cited_chunk_ids:
-            type_text(f"  Sources: {', '.join(answer.cited_chunk_ids)}", delay=0.02)
-        type_text(f"  Trace:   {trace_path}", delay=0.02)
-        print()
+
+        # Split multi-question input
+        questions = split_questions(raw)
+
+        for q in questions:
+            if not q:
+                continue
+            correlation_id = new_correlation_id()
+            trace = Trace(correlation_id, request_type="interactive_chat")
+            log(logger, "info", f"question: {q}", correlation_id, stage="chat")
+            try:
+                answer = ask(q, result.index, llm, trace)
+            except RuntimeError as exc:
+                print()
+                type_text(f"  [error] {exc}", delay=0.03)
+                print()
+                trace.finish_and_save()
+                continue
+            trace_path = trace.finish_and_save()
+            # Clean answer: extract just the meaningful part
+            text = answer.answer_text.strip()
+            # Remove redundant question echo from mock LLM answers
+            if "Question:" in text:
+                text = text.split("Question:")[0].strip()
+            # Remove raw chunk text that appears before the real answer
+            lines = [l.strip() for l in text.split("\n") if l.strip()]
+            if lines:
+                text = lines[-1] if len(lines) > 1 else lines[0]
+            print()
+            type_text(f"  {text}", delay=0.03)
+            print()
+            if answer.cited_chunk_ids:
+                type_text(f"  Sources: {', '.join(answer.cited_chunk_ids)}", delay=0.02)
+            type_text(f"  Trace:   {trace_path}", delay=0.02)
+            print()
 
 
 def do_single_question(result, question: str):
