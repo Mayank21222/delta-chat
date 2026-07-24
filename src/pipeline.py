@@ -16,7 +16,7 @@ from src.ingest.base import ingest_pid
 from src.observability.logging import get_logger, log, new_correlation_id
 from src.observability.tracing import Trace
 
-logger = get_logger("pipeline")
+logger = get_logger("pipeline", quiet=True)
 
 
 @dataclass

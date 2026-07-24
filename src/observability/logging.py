@@ -32,20 +32,25 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(payload)
 
 
-def get_logger(component: str, log_dir: str = "logs") -> logging.Logger:
+def get_logger(component: str, log_dir: str = "logs", quiet: bool = False) -> logging.Logger:
     os.makedirs(log_dir, exist_ok=True)
     logger = logging.getLogger(component)
     if logger.handlers:
-        return logger  # already configured
+        if quiet:
+            for h in logger.handlers:
+                if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler):
+                    h.setLevel(logging.CRITICAL)
+        return logger
     logger.setLevel(logging.INFO)
 
     file_handler = logging.FileHandler(os.path.join(log_dir, "app.log"))
     file_handler.setFormatter(JSONFormatter())
     logger.addHandler(file_handler)
 
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setFormatter(JSONFormatter())
-    logger.addHandler(stream_handler)
+    if not quiet:
+        stream_handler = logging.StreamHandler(sys.stdout)
+        stream_handler.setFormatter(JSONFormatter())
+        logger.addHandler(stream_handler)
 
     return logger
 

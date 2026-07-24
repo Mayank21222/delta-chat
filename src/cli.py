@@ -28,7 +28,7 @@ from src.observability.logging import get_logger, log, new_correlation_id
 from src.observability.tracing import Trace
 from src.pipeline import run_pipeline
 
-logger = get_logger("cli")
+logger = get_logger("cli", quiet=True)
 
 
 def load_pair(pair_path: str):
@@ -53,11 +53,10 @@ def do_ingest_and_report(pair_path: str):
 
 def interactive_chat(result):
     llm = get_llm_client()
-    print(f"Grounded chat ready ({len(result.index.chunks)} indexed chunks, "
-          f"LLM_PROVIDER={llm.__class__.__name__}). Type a question, or 'exit'.\n")
+    print(f"Ready ({len(result.index.chunks)} chunks indexed, {llm.__class__.__name__}).\n")
     while True:
         try:
-            q = input("> ").strip()
+            q = input(">> ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
             break
@@ -74,9 +73,9 @@ def interactive_chat(result):
             continue
         trace_path = trace.finish_and_save()
         print(f"\n{answer.answer_text}\n")
-        grounded_status = "Yes" if answer.grounded else "No"
-        print(f"[cited: {answer.cited_chunk_ids or 'none'} | grounded: {grounded_status} | "
-              f"trace: {trace_path}]\n")
+        if answer.cited_chunk_ids:
+            print(f"Sources: {', '.join(answer.cited_chunk_ids)}")
+        print(f"Trace: {trace_path}\n")
 
 
 def do_single_question(result, question: str):
