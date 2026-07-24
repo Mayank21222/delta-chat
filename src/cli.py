@@ -112,30 +112,29 @@ def interactive_chat(result):
         if not raw or raw.lower() in ("exit", "quit"):
             break
 
-        # Handle greetings and generic words
-        if is_greeting(raw):
-            responses = {
-                "hello": "Hello! Ask me anything about the two P&ID revisions.",
-                "hi": "Hi! I can help you compare two P&ID revisions. What would you like to know?",
-                "hey": "Hey! What would you like to know about the documents?",
-                "ok": "Ready for your question.",
-                "okay": "Ready for your question.",
-                "thanks": "You're welcome! Anything else?",
-                "thank you": "You're welcome! Feel free to ask more questions.",
-                "bye": "Goodbye!",
-                "help": "Try asking:\n  - What changed about the PSV 9027B relief valve?\n  - What is the high-high alarm setpoint for PIT 9023?\n  - Was the mechanical interlock note removed in Rev B?",
-                "?": "I answer questions about two P&ID revisions. Try asking what changed between them!",
-            }
-            print()
-            type_text(f"  {responses.get(raw.lower(), 'Ready for your question.')}", delay=0.03)
-            print()
-            continue
-
         # Split multi-question input
         questions = split_questions(raw)
 
         for i, q in enumerate(questions):
             if not q:
+                continue
+            # Handle greetings and generic words per-question
+            if is_greeting(q):
+                responses = {
+                    "hello": "Hello! Ask me anything about the two P&ID revisions.",
+                    "hi": "Hi! I can help you compare two P&ID revisions. What would you like to know?",
+                    "hey": "Hey! What would you like to know about the documents?",
+                    "ok": "Ready for your question.",
+                    "okay": "Ready for your question.",
+                    "thanks": "You're welcome! Anything else?",
+                    "thank you": "You're welcome! Feel free to ask more questions.",
+                    "bye": "Goodbye!",
+                    "help": "Try asking:\n  - What changed about the PSV 9027B relief valve?\n  - What is the high-high alarm setpoint for PIT 9023?\n  - Was the mechanical interlock note removed in Rev B?",
+                    "?": "I answer questions about two P&ID revisions. Try asking what changed between them!",
+                }
+                print()
+                type_text(f"  {responses.get(q.lower(), 'Ready for your question.')}", delay=0.03)
+                print()
                 continue
             # Show the question being asked
             if len(questions) > 1:
