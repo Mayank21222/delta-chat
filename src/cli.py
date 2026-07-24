@@ -43,11 +43,10 @@ def do_ingest_and_report(pair_path: str):
         pid_b=ds["pid_b"]["pid"], path_b=ds["pid_b"]["path"], rev_b=ds["pid_b"]["revision"],
         out_dir=f"output/{ds['pair_id']}",
     )
-    print(f"\nIngested: {ds['pid_a']['pid']} ({sum(len(p.elements) for p in result.doc_a.pages)} elements), "
-          f"{ds['pid_b']['pid']} ({sum(len(p.elements) for p in result.doc_b.pages)} elements)")
-    print(f"Delta: {len(result.delta_entries)} changes -> {result.report_md_path}")
-    print(f"Trace: {result.trace_path}")
-    print(f"Correlation id: {result.correlation_id}\n")
+    print(f"Ingested {ds['pid_a']['pid']} ({sum(len(p.elements) for p in result.doc_a.pages)} elements)")
+    print(f"Ingested {ds['pid_b']['pid']} ({sum(len(p.elements) for p in result.doc_b.pages)} elements)")
+    print(f"Delta: {len(result.delta_entries)} changes")
+    print(f"Report: {result.report_md_path}\n")
     return result
 
 
@@ -68,14 +67,23 @@ def interactive_chat(result):
         try:
             answer = ask(q, result.index, llm, trace)
         except RuntimeError as exc:
-            print(f"[error] {exc}\n")
+            print(f"  [error] {exc}\n")
             trace.finish_and_save()
             continue
         trace_path = trace.finish_and_save()
-        print(f"\n{answer.answer_text}\n")
+        # Clean answer: extract just the meaningful part
+        text = answer.answer_text.strip()
+        # Remove redundant question echo from mock LLM answers
+        if "Question:" in text:
+            text = text.split("Question:")[0].strip()
+        # Remove raw chunk text that appears before the real answer
+        lines = [l.strip() for l in text.split("\n") if l.strip()]
+        if lines:
+            text = lines[-1] if len(lines) > 1 else lines[0]
+        print(f"\n  {text}\n")
         if answer.cited_chunk_ids:
-            print(f"Sources: {', '.join(answer.cited_chunk_ids)}")
-        print(f"Trace: {trace_path}\n")
+            print(f"  Sources: {', '.join(answer.cited_chunk_ids)}")
+        print(f"  Trace:   {trace_path}\n")
 
 
 def do_single_question(result, question: str):
