@@ -32,15 +32,17 @@ from src.pipeline import run_pipeline
 logger = get_logger("cli", quiet=True)
 
 
-def type_text(text: str, delay: float = 0.02) -> None:
+def type_text(text: str, delay: float = 0.03) -> None:
     """Print text character by character for a more interactive feel."""
     for char in text:
         sys.stdout.write(char)
         sys.stdout.flush()
         if char in ".!?\n":
-            time.sleep(delay * 3)
+            time.sleep(delay * 4)
         elif char == ",":
-            time.sleep(delay * 2)
+            time.sleep(delay * 3)
+        elif char == " ":
+            time.sleep(delay * 0.5)
         else:
             time.sleep(delay)
     print()
@@ -58,10 +60,10 @@ def do_ingest_and_report(pair_path: str):
         pid_b=ds["pid_b"]["pid"], path_b=ds["pid_b"]["path"], rev_b=ds["pid_b"]["revision"],
         out_dir=f"output/{ds['pair_id']}",
     )
-    type_text(f"Ingested {ds['pid_a']['pid']} ({sum(len(p.elements) for p in result.doc_a.pages)} elements)", delay=0.01)
-    type_text(f"Ingested {ds['pid_b']['pid']} ({sum(len(p.elements) for p in result.doc_b.pages)} elements)", delay=0.01)
-    type_text(f"Delta: {len(result.delta_entries)} changes", delay=0.01)
-    type_text(f"Report: {result.report_md_path}", delay=0.01)
+    type_text(f"Ingested {ds['pid_a']['pid']} ({sum(len(p.elements) for p in result.doc_a.pages)} elements)", delay=0.02)
+    type_text(f"Ingested {ds['pid_b']['pid']} ({sum(len(p.elements) for p in result.doc_b.pages)} elements)", delay=0.02)
+    type_text(f"Delta: {len(result.delta_entries)} changes", delay=0.02)
+    type_text(f"Report: {result.report_md_path}", delay=0.02)
     print()
     return result
 
@@ -70,24 +72,24 @@ def interactive_chat(result):
     llm = get_llm_client()
     ds = load_pair("eval/datasets/export_gas_compressor_pair.json")
     print()
-    type_text("=" * 60, delay=0.005)
-    type_text("  Document Delta & Grounded Chat", delay=0.03)
-    type_text("=" * 60, delay=0.005)
+    type_text("=" * 60, delay=0.003)
+    type_text("  Document Delta & Grounded Chat", delay=0.04)
+    type_text("=" * 60, delay=0.003)
     print()
-    type_text("  Documents loaded:", delay=0.02)
-    type_text(f"    PID A: {ds['pid_a']['pid']} ({ds['pid_a']['revision']})", delay=0.02)
-    type_text(f"    PID B: {ds['pid_b']['pid']} ({ds['pid_b']['revision']})", delay=0.02)
+    type_text("  Documents loaded:", delay=0.03)
+    type_text(f"    PID A: {ds['pid_a']['pid']} ({ds['pid_a']['revision']})", delay=0.03)
+    type_text(f"    PID B: {ds['pid_b']['pid']} ({ds['pid_b']['revision']})", delay=0.03)
     print()
-    type_text(f"  Delta: {len(result.delta_entries)} changes detected", delay=0.02)
-    type_text(f"  Index: {len(result.index.chunks)} searchable chunks", delay=0.02)
-    type_text(f"  LLM:   {llm.__class__.__name__}", delay=0.02)
+    type_text(f"  Delta: {len(result.delta_entries)} changes detected", delay=0.03)
+    type_text(f"  Index: {len(result.index.chunks)} searchable chunks", delay=0.03)
+    type_text(f"  LLM:   {llm.__class__.__name__}", delay=0.03)
     print()
-    type_text("  Commands: type 'quit' to exit", delay=0.02)
-    type_text("  Try asking:", delay=0.02)
-    type_text("    - What changed about the PSV 9027B relief valve?", delay=0.02)
-    type_text("    - What is the high-high alarm setpoint for PIT 9023?", delay=0.02)
-    type_text("    - Was the mechanical interlock note removed in Rev B?", delay=0.02)
-    type_text("=" * 60, delay=0.005)
+    type_text("  Commands: type 'quit' to exit", delay=0.03)
+    type_text("  Try asking:", delay=0.03)
+    type_text("    - What changed about the PSV 9027B relief valve?", delay=0.03)
+    type_text("    - What is the high-high alarm setpoint for PIT 9023?", delay=0.03)
+    type_text("    - Was the mechanical interlock note removed in Rev B?", delay=0.03)
+    type_text("=" * 60, delay=0.003)
     print()
     while True:
         try:
@@ -119,11 +121,12 @@ def interactive_chat(result):
         if lines:
             text = lines[-1] if len(lines) > 1 else lines[0]
         print()
-        type_text(f"  {text}")
+        type_text(f"  {text}", delay=0.03)
         print()
         if answer.cited_chunk_ids:
-            print(f"  Sources: {', '.join(answer.cited_chunk_ids)}")
-        print(f"  Trace:   {trace_path}\n")
+            type_text(f"  Sources: {', '.join(answer.cited_chunk_ids)}", delay=0.02)
+        type_text(f"  Trace:   {trace_path}", delay=0.02)
+        print()
 
 
 def do_single_question(result, question: str):
