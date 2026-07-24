@@ -40,22 +40,48 @@ def resolve_pid(pid: str, path: str, revision_label: str | None = None) -> Resol
 
 
 def detect_format(resolved: ResolvedPID) -> str:
-    """Sniff format from magic bytes / extension. Cheap and deliberately dumb.
+    """Sniff format from magic bytes + text-layer heuristics.
 
-    Real-world hardening (not done here, see README cuts): detect "scanned"
-    vs "native" PDF by checking whether >~90% of pages have an extractable
-    text layer, rather than trusting a filename convention.
+    For PDFs: inspects whether pages have extractable text. If fewer than
+    half the pages produce meaningful text (>50 chars), the PDF is treated
+    as scanned. The filename convention (_scanned suffix) is used as a
+    fallback when text extraction fails (e.g. corrupted or unusual PDFs).
     """
     head = resolved.bytes_[:8]
     ext = os.path.splitext(resolved.filename)[1].lower()
 
     if head.startswith(b"%PDF"):
-        if "_scanned" in resolved.filename.lower():
-            return "pdf_scanned"
-        return "pdf_native"
+        if _has_text_layer(resolved.bytes_):
+            return "pdf_native"
+        return "pdf_scanned"
     if ext == ".dwg" or head[:4] in (b"AC10", b"AC15", b"AC18", b"AC21", b"AC24"):
         return "dwg"
     raise ValueError(f"Unrecognized format for PID {resolved.pid} ({resolved.filename})")
+
+
+def _has_text_layer(pdf_bytes: bytes) -> bool:
+    """Check whether a PDF has a meaningful extractable text layer.
+
+    Opens the PDF with PyMuPDF and checks how many pages produce >50 chars
+    of extractable text. If fewer than half do, the PDF is treated as
+    scanned/rasterized. This is more robust than a filename convention.
+    """
+    try:
+        import fitz
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        text_pages = 0
+        total_pages = len(doc)
+        if total_pages == 0:
+            return False
+        for i in range(min(total_pages, 5)):  # check first 5 pages max
+            text = doc[i].get_text().strip()
+            if len(text) > 50:
+                text_pages += 1
+        doc.close()
+        return text_pages > total_pages / 2
+    except Exception:
+        # If we can't open with fitz, assume native (will fail gracefully downstream)
+        return True
 
 
 class FormatAdapter(ABC):

@@ -8,3 +8,6 @@ logs/
 *.egg-info/
 .venv/
 venv/
+.DS_Store
+*.txt
+!requirements.txt

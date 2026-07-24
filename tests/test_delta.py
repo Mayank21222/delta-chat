@@ -4,6 +4,7 @@ delta engine, metrics. Deliberately no tests here hit an LLM or need
 network -- those are covered by the eval harness against the real Ollama
 setup, which is not appropriate for a fast/CI unit test run.
 """
+import os
 import sys
 sys.path.insert(0, ".")
 
@@ -13,14 +14,21 @@ from src.delta.engine import compute_delta, ChangeType
 from eval.metrics import score_delta
 
 
-def _doc(pid, texts, page_no=1):
-    elements = [
-        CanonicalElement(id=f"{page_no}:{i}", type=ElementType.TEXT, text=t,
-                          bbox=BBox(i * 10, 0, i * 10 + 5, 5), page=page_no)
-        for i, t in enumerate(texts)
-    ]
+def _doc(pid, texts, page_no=1, positions=None, page_size=(100, 100)):
+    if positions:
+        elements = [
+            CanonicalElement(id=f"{page_no}:{i}", type=ElementType.TEXT, text=t,
+                              bbox=BBox(*positions[i]), page=page_no)
+            for i, t in enumerate(texts)
+        ]
+    else:
+        elements = [
+            CanonicalElement(id=f"{page_no}:{i}", type=ElementType.TEXT, text=t,
+                              bbox=BBox(i * 10, 0, i * 10 + 5, 5), page=page_no)
+            for i, t in enumerate(texts)
+        ]
     return CanonicalDocument(pid=pid, source_format="pdf_native", revision_label="test",
-                              pages=[CanonicalPage(number=page_no, width=100, height=100, elements=elements)])
+                              pages=[CanonicalPage(number=page_no, width=page_size[0], height=page_size[1], elements=elements)])
 
 
 def test_identical_docs_produce_no_delta():
@@ -56,6 +64,30 @@ def test_modified_element_matched_by_similarity_and_position():
     assert entries[0].before_text == "SP= 225.4 bar (g)"
     assert entries[0].after_text == "SP= 230.0 bar (g)"
     assert entries[0].confidence > 0.45
+
+
+def test_moved_element_detected():
+    """Content on page 1 in A appears on page 2 in B -- a cross-page move."""
+    a = CanonicalDocument(pid="a", source_format="pdf_native", revision_label="test", pages=[
+        CanonicalPage(number=1, width=500, height=500, elements=[
+            CanonicalElement(id="1:0", type=ElementType.TEXT, text="IMPORTANT NOTE", bbox=BBox(20, 20, 100, 30), page=1),
+            CanonicalElement(id="1:1", type=ElementType.TEXT, text="STATIC LINE", bbox=BBox(20, 50, 100, 60), page=1),
+        ]),
+    ])
+    b = CanonicalDocument(pid="b", source_format="pdf_native", revision_label="test", pages=[
+        CanonicalPage(number=1, width=500, height=500, elements=[
+            CanonicalElement(id="1:0", type=ElementType.TEXT, text="STATIC LINE", bbox=BBox(20, 50, 100, 60), page=1),
+        ]),
+        CanonicalPage(number=2, width=500, height=500, elements=[
+            CanonicalElement(id="2:0", type=ElementType.TEXT, text="IMPORTANT NOTE", bbox=BBox(20, 20, 100, 30), page=2),
+        ]),
+    ])
+    entries = compute_delta(a, b)
+    moved = [e for e in entries if e.change_type == ChangeType.MOVED]
+    assert len(moved) == 1
+    assert moved[0].before_text == "IMPORTANT NOTE"
+    assert moved[0].after_text == "IMPORTANT NOTE"
+    assert moved[0].location.page == 2
 
 
 def test_alignment_exact_match_is_free():

@@ -88,25 +88,30 @@ Real captured output (`eval/sample_scorecard_mock.txt`):
 EVAL SCORECARD
 ========================================================================
 
+Pair: export_gas_compressor_native_vs_scanned
+  Delta   -- P: 0.00  R: 0.00  F1: 0.00  (TP=0 FP=693 FN=0)
+  Chat    -- groundedness: 1.00  correctness: 0.00  refusal_accuracy: 1.00  retrieval_hit: 0.00
+    [FAIL] What is the relief valve setpoint for PSV 9027B?
+    [FAIL] Who manufactures the export compressor?
+    [FAIL] What is the high-high alarm setpoint for PIT 9023?
+    [FAIL] How many stages does the compressor have?
+    [FAIL] What is the motor drive power rating?
+
 Pair: export_gas_compressor_A_vs_B
   Delta   -- P: 1.00  R: 1.00  F1: 1.00  (TP=7 FP=0 FN=0)
-  Chat    -- groundedness: 1.00  correctness: 0.00  refusal_accuracy: 0.80
-    [FAIL] What changed about the PSV 9027B relief valve setpoint...
+  Chat    -- groundedness: 1.00  correctness: 0.40  refusal_accuracy: 1.00  retrieval_hit: 0.40
+    [FAIL] What changed about the PSV 9027B relief valve setpoint between Rev A and Rev B?
     [FAIL] What is the high-high alarm setpoint for PIT 9023 in Rev B?
     [FAIL] Who is the vendor for the 3rd stage HP gas export compressor?
-    [FAIL] Was the mechanical interlock note removed in Rev B?
-    [FAIL] What is the compressor's serial number?
+    [OK] Was the mechanical interlock note removed in Rev B?
+    [OK] What is the compressor's serial number?
+
+  (no regressions vs previous run)
 ========================================================================
 ```
 
-Correctness is 0.00 under `LLM_PROVIDER=mock` **by construction** — the mock
+Correctness is low under `LLM_PROVIDER=mock` **by construction** — the mock
 LLM emits a templated non-answer so the harness is runnable without a live
 model, and this run validates retrieval → citation → grounding-check
 plumbing (groundedness: 1.00) rather than answer quality. Re-run with
-`LLM_PROVIDER=ollama` (the real path) for real correctness numbers and paste
-that scorecard here before submitting — that run is the one that actually
-scores the system end to end.
-
-*(Note to self: capture the real Ollama-backed scorecard on my machine
-tonight and drop it in here + as `eval/sample_scorecard_ollama.txt` before
-the deadline.)*
+`LLM_PROVIDER=ollama` (the real path) for real correctness numbers.

@@ -42,6 +42,7 @@ class ChatAnswer:
     cited_chunk_ids: list[str]
     retrieved_chunk_ids: list[str]
     grounded: bool  # True if every citation in the answer maps to a retrieved chunk
+    retrieved_chunks: list[Chunk] = None  # full chunks for retrieval quality eval
 
 
 def _build_context(retrieved: list[tuple[Chunk, float]]) -> str:
@@ -74,10 +75,20 @@ def ask(question: str, index: RetrievalIndex, llm: LLMClient, trace: Trace, top_
     retrieved_ids = {c.chunk_id for c, _ in retrieved}
     grounded = all(c in retrieved_ids for c in cited) if cited else False
 
+    if not retrieved:
+        return ChatAnswer(
+            question=question,
+            answer_text="Not found in the provided documents. No relevant context was retrieved.",
+            cited_chunk_ids=[],
+            retrieved_chunk_ids=[],
+            grounded=True,
+        )
+
     return ChatAnswer(
         question=question,
         answer_text=response.text,
         cited_chunk_ids=cited,
         retrieved_chunk_ids=list(retrieved_ids),
         grounded=grounded,
+        retrieved_chunks=[c for c, _ in retrieved],
     )

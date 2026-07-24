@@ -74,7 +74,8 @@ def interactive_chat(result):
             continue
         trace_path = trace.finish_and_save()
         print(f"\n{answer.answer_text}\n")
-        print(f"[cited: {answer.cited_chunk_ids or 'none'} | grounded: {answer.grounded} | "
+        grounded_status = "Yes" if answer.grounded else "No"
+        print(f"[cited: {answer.cited_chunk_ids or 'none'} | grounded: {grounded_status} | "
               f"trace: {trace_path}]\n")
 
 

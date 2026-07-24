@@ -24,6 +24,7 @@ class ChangeType(str, Enum):
     ADDED = "added"
     REMOVED = "removed"
     MODIFIED = "modified"
+    MOVED = "moved"
 
 
 @dataclass
@@ -56,6 +57,10 @@ def _describe(match: Match) -> str:
         return f"Added: \"{match.b.text}\""
     if match.kind == MatchKind.UNMATCHED_A:
         return f"Removed: \"{match.a.text}\""
+    if match.kind == MatchKind.MOVED:
+        from_loc = f"page {match.a.page} @({match.a.bbox.x0:.0f},{match.a.bbox.y0:.0f})"
+        to_loc = f"page {match.b.page} @({match.b.bbox.x0:.0f},{match.b.bbox.y0:.0f})"
+        return f"Moved: \"{match.a.text}\" from {from_loc} to {to_loc}"
     # fuzzy modified
     type_note = ""
     if match.a.type != match.b.type:
@@ -98,6 +103,19 @@ def compute_delta(doc_a: CanonicalDocument, doc_b: CanonicalDocument) -> list[De
                 after_text=None,
                 before_element_id=m.a.id,
                 after_element_id=None,
+            ))
+        elif m.kind == MatchKind.MOVED:
+            entries.append(DeltaEntry(
+                id=f"D{idx:04d}",
+                change_type=ChangeType.MOVED,
+                element_type=m.b.type.value,
+                location=Location(m.b.page, m.b.bbox.as_tuple()),
+                description=_describe(m),
+                confidence=m.score,
+                before_text=m.a.text,
+                after_text=m.b.text,
+                before_element_id=m.a.id,
+                after_element_id=m.b.id,
             ))
         elif m.kind == MatchKind.FUZZY:
             if m.a.text.strip() == m.b.text.strip():

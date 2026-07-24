@@ -1,0 +1,30 @@
+[
+  {
+    "pair_id": "export_gas_compressor_native_vs_scanned",
+    "delta_f1": 0.0,
+    "delta_precision": 0.0,
+    "delta_recall": 0.0,
+    "delta_tp": 0,
+    "delta_fp": 693,
+    "delta_fn": 0,
+    "chat_groundedness": 1.0,
+    "chat_correctness": 0.0,
+    "chat_refusal_accuracy": 1.0,
+    "num_delta_entries": 693,
+    "num_gt_entries": 0
+  },
+  {
+    "pair_id": "export_gas_compressor_A_vs_B",
+    "delta_f1": 1.0,
+    "delta_precision": 1.0,
+    "delta_recall": 1.0,
+    "delta_tp": 7,
+    "delta_fp": 0,
+    "delta_fn": 0,
+    "chat_groundedness": 1.0,
+    "chat_correctness": 0.4,
+    "chat_refusal_accuracy": 1.0,
+    "num_delta_entries": 7,
+    "num_gt_entries": 7
+  }
+]

@@ -16,6 +16,30 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 
 
+# Approximate cost per 1M tokens by model prefix (USD). For local Ollama
+# models cost is $0 but we track tokens for throughput analysis.
+_MODEL_COST_PER_1M = {
+    "llama3": 0.0,       # local, free
+    "llama2": 0.0,
+    "mistral": 0.0,
+    "phi": 0.0,
+    "gpt-4": 30.0,       # hosted, for reference
+    "gpt-4o": 2.5,
+    "gpt-3.5": 0.5,
+    "claude-3": 15.0,
+    "mock": 0.0,
+}
+
+
+def _estimate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    """Estimate cost in USD based on model and token counts."""
+    for prefix, cost_per_1m in _MODEL_COST_PER_1M.items():
+        if model.lower().startswith(prefix):
+            total_tokens = prompt_tokens + completion_tokens
+            return round(total_tokens * cost_per_1m / 1_000_000, 6)
+    return 0.0
+
+
 @dataclass
 class Span:
     name: str
@@ -57,7 +81,9 @@ class Trace:
             self.spans.append(s)
 
     def record_llm_call(self, model: str, prompt_tokens: int, completion_tokens: int,
-                         latency_ms: float, cost_usd: float = 0.0) -> None:
+                         latency_ms: float, cost_usd: float | None = None) -> None:
+        if cost_usd is None:
+            cost_usd = _estimate_cost(model, prompt_tokens, completion_tokens)
         self.llm_calls.append({
             "model": model,
             "prompt_tokens": prompt_tokens,

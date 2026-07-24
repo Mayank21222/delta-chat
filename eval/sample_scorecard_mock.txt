@@ -1,25 +1,32 @@
-
 ========================================================================
 EVAL SCORECARD
 ========================================================================
 
+Pair: export_gas_compressor_native_vs_scanned
+  Delta   -- P: 0.00  R: 0.00  F1: 0.00  (TP=0 FP=693 FN=0)
+  Chat    -- groundedness: 1.00  correctness: 0.00  refusal_accuracy: 1.00  retrieval_hit: 0.00
+    [FAIL] What is the relief valve setpoint for PSV 9027B?
+           grounded=True keyword_match=False cited=['delta:D0125', 'pid_a:1:62', 'delta:D0181']
+    [FAIL] Who manufactures the export compressor?
+           grounded=True keyword_match=False cited=['pid_a:1:250', 'pid_a:1:2', 'pid_a:1:273']
+    [FAIL] What is the high-high alarm setpoint for PIT 9023?
+           grounded=True keyword_match=False cited=['pid_a:1:73', 'pid_a:1:369', 'delta:D0004']
+    [FAIL] How many stages does the compressor have?
+           grounded=True keyword_match=False cited=['pid_a:1:637', 'pid_a:1:250', 'pid_a:1:329']
+    [FAIL] What is the motor drive power rating?
+           grounded=True keyword_match=False cited=['pid_a:1:394', 'delta:D0009', 'pid_b:1:125']
+
 Pair: export_gas_compressor_A_vs_B
   Delta   -- P: 1.00  R: 1.00  F1: 1.00  (TP=7 FP=0 FN=0)
-  Chat    -- groundedness: 1.00  correctness: 0.00  refusal_accuracy: 0.80
-    [FAIL] What changed about the PSV 9027B relief valve setpoint between Rev A a
-           grounded=True keyword_match=False cited=['pid_a:1:62', 'pid_b:1:62', 'pid_a:1:46']
-           answer: Based on the retrieved context, here is a grounded (mock) answer. [pid_a:1:62] [pid_b:1:62] [pid_a:1:46]
+  Chat    -- groundedness: 1.00  correctness: 0.40  refusal_accuracy: 1.00  retrieval_hit: 0.40
+    [FAIL] What changed about the PSV 9027B relief valve setpoint between Rev A and Rev B?
+           grounded=True keyword_match=False cited=['delta:D0007', 'pid_a:1:62', 'pid_b:1:62']
     [FAIL] What is the high-high alarm setpoint for PIT 9023 in Rev B?
-           grounded=True keyword_match=False cited=['pid_a:1:370', 'pid_b:1:367', 'pid_a:1:369']
-           answer: Based on the retrieved context, here is a grounded (mock) answer. [pid_a:1:370] [pid_b:1:367] [pid_a:1:369]
+           grounded=True keyword_match=False cited=['pid_b:1:115', 'pid_a:1:369', 'pid_b:1:366']
     [FAIL] Who is the vendor for the 3rd stage HP gas export compressor?
-           grounded=True keyword_match=False cited=['pid_a:1:2', 'pid_a:1:273', 'pid_b:1:2']
-           answer: Based on the retrieved context, here is a grounded (mock) answer. [pid_a:1:2] [pid_a:1:273] [pid_b:1:2]
-    [FAIL] Was the mechanical interlock note removed in Rev B?
-           grounded=True keyword_match=False cited=['delta:D0004', 'delta:D0005', 'pid_a:1:66']
-           answer: Based on the retrieved context, here is a grounded (mock) answer. [delta:D0004] [delta:D0005] [pid_a:1:66]
-    [FAIL] What is the compressor's serial number?
-           grounded=True keyword_match=False cited=['pid_a:1:250', 'pid_a:1:329', 'pid_b:1:247']
-           answer: Based on the retrieved context, here is a grounded (mock) answer. [pid_a:1:250] [pid_a:1:329] [pid_b:1:247]
+           grounded=True keyword_match=False cited=['pid_b:1:344', 'pid_a:1:2', 'pid_a:1:273']
+    [OK] Was the mechanical interlock note removed in Rev B?
+    [OK] What is the compressor's serial number?
 
+  (no regressions vs previous run)
 ========================================================================
