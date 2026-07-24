@@ -134,9 +134,13 @@ def interactive_chat(result):
         # Split multi-question input
         questions = split_questions(raw)
 
-        for q in questions:
+        for i, q in enumerate(questions):
             if not q:
                 continue
+            # Show the question being asked
+            if len(questions) > 1:
+                print()
+                type_text(f"  Q{i+1}: {q}", delay=0.02)
             correlation_id = new_correlation_id()
             trace = Trace(correlation_id, request_type="interactive_chat")
             log(logger, "info", f"question: {q}", correlation_id, stage="chat")
@@ -159,11 +163,18 @@ def interactive_chat(result):
             if lines:
                 text = lines[-1] if len(lines) > 1 else lines[0]
             print()
-            type_text(f"  {text}", delay=0.03)
-            print()
-            if answer.cited_chunk_ids:
-                type_text(f"  Sources: {', '.join(answer.cited_chunk_ids)}", delay=0.02)
-            type_text(f"  Trace:   {trace_path}", delay=0.02)
+            if len(questions) > 1:
+                type_text(f"  A{i+1}: {text}", delay=0.03)
+                print()
+                if answer.cited_chunk_ids:
+                    type_text(f"          Sources: {', '.join(answer.cited_chunk_ids)}", delay=0.02)
+                type_text(f"          Trace:   {trace_path}", delay=0.02)
+            else:
+                type_text(f"  {text}", delay=0.03)
+                print()
+                if answer.cited_chunk_ids:
+                    type_text(f"  Sources: {', '.join(answer.cited_chunk_ids)}", delay=0.02)
+                type_text(f"  Trace:   {trace_path}", delay=0.02)
             print()
 
 
