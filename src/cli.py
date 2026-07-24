@@ -52,7 +52,22 @@ def do_ingest_and_report(pair_path: str):
 
 def interactive_chat(result):
     llm = get_llm_client()
-    print(f"Ready ({len(result.index.chunks)} chunks indexed, {llm.__class__.__name__}).\n")
+    ds = load_pair("eval/datasets/export_gas_compressor_pair.json")
+    print("=" * 60)
+    print("  Document Delta & Grounded Chat")
+    print("=" * 60)
+    print(f"\n  Documents loaded:")
+    print(f"    PID A: {ds['pid_a']['pid']} ({ds['pid_a']['revision']})")
+    print(f"    PID B: {ds['pid_b']['pid']} ({ds['pid_b']['revision']})")
+    print(f"\n  Delta: {len(result.delta_entries)} changes detected")
+    print(f"  Index: {len(result.index.chunks)} searchable chunks")
+    print(f"  LLM:   {llm.__class__.__name__}")
+    print(f"\n  Commands: type 'quit' to exit")
+    print(f"  Try asking:")
+    print(f"    - What changed about the PSV 9027B relief valve?")
+    print(f"    - What is the high-high alarm setpoint for PIT 9023?")
+    print(f"    - Was the mechanical interlock note removed in Rev B?")
+    print("=" * 60 + "\n")
     while True:
         try:
             q = input(">> ").strip()
@@ -67,7 +82,7 @@ def interactive_chat(result):
         try:
             answer = ask(q, result.index, llm, trace)
         except RuntimeError as exc:
-            print(f"  [error] {exc}\n")
+            print(f"\n  [error] {exc}\n")
             trace.finish_and_save()
             continue
         trace_path = trace.finish_and_save()
