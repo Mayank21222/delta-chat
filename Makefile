@@ -10,13 +10,13 @@ install:
 	@echo "  ollama pull llama3.1:8b"
 
 run:
-	python3 -m src.cli run --pair $(PAIR)
+	LLM_PROVIDER=mock python3 -m src.cli run --pair $(PAIR)
 
 report:
 	python3 -m src.cli report --pair $(PAIR)
 
 chat:
-	python3 -m src.cli chat --pair $(PAIR)
+	LLM_PROVIDER=mock python3 -m src.cli chat --pair $(PAIR)
 
 eval:
 	LLM_PROVIDER=mock python3 eval/run_eval.py
