@@ -89,6 +89,7 @@ def interactive_chat(result):
     print()
     type_text("=" * 60, delay=0.003)
     type_text("  Document Delta & Grounded Chat", delay=0.04)
+    type_text("  Compare P&ID revisions. Ask questions. Get cited answers.", delay=0.02)
     type_text("=" * 60, delay=0.003)
     print()
     type_text("  Documents loaded:", delay=0.03)

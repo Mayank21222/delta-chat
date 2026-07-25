@@ -4,9 +4,14 @@ PAIR ?= eval/datasets/export_gas_compressor_pair.json
 
 install:
 	pip3 install -r requirements.txt
-	@echo "Also required on PATH: tesseract, poppler (pdftoppm/pdftotext) for the scanned-PDF adapter."
-	@echo "Also required: a running Ollama server with the model in .env pulled, e.g.:"
-	@echo "  ollama serve &"
+	@echo ""
+	@echo "System dependencies (macOS):"
+	@echo "  brew install tesseract poppler ollama"
+	@echo ""
+	@echo "System dependencies (Ubuntu):"
+	@echo "  apt install tesseract-ocr poppler-utils"
+	@echo ""
+	@echo "LLM setup:"
 	@echo "  ollama pull llama3.1:8b"
 
 run:
