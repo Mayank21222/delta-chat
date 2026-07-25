@@ -28,17 +28,21 @@ You have been given context chunks from two P&ID revisions and a delta report. \
 Each chunk is labeled with an ID like [pid_a:1:441] or [delta:D0001].
 
 CRITICAL INSTRUCTIONS:
-1. Read EVERY chunk in the context carefully before answering.
+1. Read EVERY chunk in the context carefully before answering. \
+The answer may be in ANY chunk, including short labels, values, or text near labels.
 2. Delta entries (labeled delta:) describe what changed between revisions. \
 If a question asks "what changed" or "was X removed/added/modified", look at the delta chunks.
 3. If you see a delta entry that answers the question, cite it directly. \
 For example, if delta:D0004 says 'Removed: "MECHANICAL"' and delta:D0005 says 'Removed: "INTERLOCK"', \
 then the mechanical interlock WAS removed.
-4. Every factual claim MUST end with a citation in square brackets using the exact \
+4. For questions like "who is the vendor" or "who manufactures", look for chunks \
+with the label (e.g. "VENDOR") AND the adjacent value (e.g. "MAN ENERGY SOLUTIONS"). \
+Cite the value chunk that contains the answer.
+5. Every factual claim MUST end with a citation in square brackets using the exact \
 chunk id given in the context, e.g. "The setpoint is 230.0 bar(g) [delta:D0001]".
-5. ONLY say "Not found in the provided documents." if you have genuinely checked \
+6. ONLY say "Not found in the provided documents." if you have genuinely checked \
 ALL provided chunks and none contain relevant information.
-6. Be concise. This is an engineering review tool, not a chat companion."""
+7. Be concise. This is an engineering review tool, not a chat companion."""
 
 CITATION_RE = re.compile(r"\[(pid_[ab]:[^\]]+|delta:[^\]]+)\]")
 

@@ -98,29 +98,40 @@ class RetrievalIndex:
         results = [(self.chunks[i], float(sims[i])) for i in ranked if sims[i] > 0]
         seen_ids = {c.chunk_id for c, _ in results}
 
-        # Label/value proximity boost: find short chunks (<6 words) that
-        # contain a query keyword. These are almost certainly labels or tags
-        # on the P&ID (e.g. "VENDOR", "MOTOR DRIVE POWER"). Pull in their
-        # same-page neighbors to catch the associated value that TF-IDF alone
-        # can't link (e.g. "MAN ENERGY SOLUTIONS" next to "VENDOR").
-        q_words = {w.lower() for w in _re.findall(r"\w{3,}", query.lower())}
+        # Label/value proximity boost: scan for short label-like chunks
+        # (≤3 words) containing a query keyword anywhere in the index.
+        # P&ID labels like "VENDOR" are 1-3 words. Pull in the label
+        # itself AND its immediate neighbors to provide context for the
+        # LLM (e.g. "VENDOR" + "MAN ENERGY SOLUTIONS" side by side).
+        stopwords = {"the", "for", "and", "are", "not", "was", "has", "its", "this", "that", "with"}
+        q_words = {w.lower() for w in _re.findall(r"\w{3,}", query.lower())} - stopwords
+        label_count = 0
         for i, c in enumerate(self.chunks):
             if c.kind == "delta" or c.chunk_id in seen_ids:
                 continue
             c_words = set(_re.findall(r"\w{3,}", c.text.lower()))
             word_count = len(c.text.split())
-            if word_count <= 5 and q_words & c_words:
-                for nidx in self._neighbors(i, radius=5):
+            if word_count <= 3 and q_words & c_words:
+                label_count += 1
+                if label_count > 10:
+                    break
+                # Add the label itself so the LLM can read the context
+                if c.chunk_id not in seen_ids:
+                    results.append((c, 0.9))
+                    seen_ids.add(c.chunk_id)
+                # Add neighbors
+                for nidx in self._neighbors(i, radius=1):
                     nc = self.chunks[nidx]
                     if nc.chunk_id not in seen_ids:
                         results.append((nc, 0.9))
                         seen_ids.add(nc.chunk_id)
 
-        # Small spatial expansion from top TF-IDF results (single hop, radius 3)
-        for i in ranked[:top_k]:
+        # Small spatial expansion from top TF-IDF results (single hop, radius 2).
+        # Only expand from top 5 results to avoid flooding context.
+        for i in ranked[:min(5, top_k)]:
             if sims[i] <= 0:
                 continue
-            for nidx in self._neighbors(i, radius=3):
+            for nidx in self._neighbors(i, radius=2):
                 c = self.chunks[nidx]
                 if c.chunk_id not in seen_ids:
                     results.append((c, float(sims[i]) * 0.3))
@@ -132,9 +143,10 @@ class RetrievalIndex:
                 results.append((c, 0.0))
                 seen_ids.add(c.chunk_id)
 
-        # Cap non-delta results to keep LLM context manageable
+        # Cap non-delta results to keep LLM context manageable.
+        # llama3.1:8b struggles with 47+ chunks; 30 is a good balance.
         results.sort(key=lambda x: -x[1])
-        max_chunks = 80
+        max_chunks = 30
         delta_chunks = [(c, s) for c, s in results if c.kind == "delta"]
         non_delta = [(c, s) for c, s in results if c.kind != "delta"][:max_chunks]
         return non_delta + delta_chunks
