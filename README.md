@@ -147,6 +147,22 @@ Pair: export_gas_compressor_A_vs_B
 
 ---
 
+## What I Cut
+
+To keep scope tight for the take-home, I deliberately excluded:
+
+- **Vector DB / embeddings** — TF-IDF works for 2-PID scope; embeddings needed at500+ sheets
+- **Multi-page table alignment** — tables that span pages aren't aligned across pages
+- **Semantic similarity for alignment** — pure text+spatial scoring; no sentence-transformers
+- **Streaming API** — Ollama client collects full response; streaming only in CLI display
+- **Incremental indexing** — full rebuild on every run; no delta-only updates
+- **DWG parsing** — adapter stub exists behind a real seam; no ODA/ezdxf dependency
+- **PDF merge/overlay** — delta visualization is text-only; no visual markup layer
+- **Authentication / multi-tenant** — single-user CLI tool; no auth layer
+- **CI/CD pipeline** — no GitHub Actions; eval is local-only
+
+---
+
 ## What I'd Do Next
 
 - **Embeddings + vector DB** for better retrieval at scale (500+ sheets)

@@ -1,0 +1,29 @@
+{
+  "pair_id": "export_gas_compressor_identical_revisions",
+  "provenance": "PID A and PID B are both the same Rev A PDF (native, born-digital). The delta should be zero because the content is identical. This tests whether the system correctly identifies no-changes when comparing identical documents and whether chat answers remain accurate without delta entries to rely on.",
+  "pid_a": {"pid": "pid-export-identical-a", "path": "data/samples/raw/pid_export_gas_compressor_revA.pdf", "revision": "Rev A (copy 1)"},
+  "pid_b": {"pid": "pid-export-identical-b", "path": "data/samples/raw/pid_export_gas_compressor_revA.pdf", "revision": "Rev A (copy 2)"},
+
+  "ground_truth_delta": [],
+
+  "qa": [
+    {
+      "question": "What is the relief valve setpoint for PSV 9027B?",
+      "expected_keywords": ["225.4"],
+      "expect_citation_kind": "pid",
+      "expect_refusal": false
+    },
+    {
+      "question": "What changed between the two revisions?",
+      "expected_keywords": [],
+      "expect_citation_kind": "any",
+      "expect_refusal": false
+    },
+    {
+      "question": "Who is the vendor for the compressor?",
+      "expected_keywords": ["MAN ENERGY SOLUTIONS"],
+      "expect_citation_kind": "pid",
+      "expect_refusal": false
+    }
+  ]
+}

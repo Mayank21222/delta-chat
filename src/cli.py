@@ -70,17 +70,24 @@ def do_ingest_and_report(pair_path: str):
 
 def is_greeting(q: str) -> bool:
     """Check if the input is a greeting or generic word."""
-    greetings = {"hello", "hi", "hey", "ok", "okay", "thanks", "thank you", "bye", "quit", "exit", "help", "?", "!"}
+    greetings = {"hello", "hi", "hey", "ok", "okay", "yes", "no", "clear", "thanks", "thank you", "bye", "quit", "exit", "help", "?", "!"}
     return q.lower().strip() in greetings
 
 
 def split_questions(text: str) -> list[str]:
     """Split multi-question input into individual questions."""
-    # Split on question marks, newlines, or semicolons
     import re
-    parts = re.split(r'[?\n;]+', text)
-    questions = [p.strip() for p in parts if p.strip() and p.strip() not in ("", "?")]
-    return questions if questions else [text.strip()]
+    # Split on newlines first
+    lines = [l.strip() for l in text.split("\n") if l.strip()]
+    questions = []
+    for line in lines:
+        # Strip numbered prefixes like "1. " or "2) "
+        cleaned = re.sub(r'^\d+[\.\)]\s*', '', line)
+        if cleaned:
+            questions.append(cleaned)
+    if not questions:
+        return [text.strip()]
+    return questions
 
 
 def interactive_chat(result):
@@ -113,13 +120,14 @@ def interactive_chat(result):
         if not raw or raw.lower() in ("exit", "quit"):
             break
 
-        # Split multi-question input
+        # Split multi-question input into individual questions
         questions = split_questions(raw)
 
-        for i, q in enumerate(questions):
+        for q in questions:
             if not q:
                 continue
-            # Handle greetings and generic words per-question
+
+            # Handle greetings and generic words
             if is_greeting(q):
                 responses = {
                     "hello": "Hello! Ask me anything about the two P&ID revisions.",
@@ -127,6 +135,9 @@ def interactive_chat(result):
                     "hey": "Hey! What would you like to know about the documents?",
                     "ok": "Ready for your question.",
                     "okay": "Ready for your question.",
+                    "yes": "Ready for your question.",
+                    "no": "Okay. Feel free to ask something else.",
+                    "clear": "Screen cleared. What would you like to know?",
                     "thanks": "You're welcome! Anything else?",
                     "thank you": "You're welcome! Feel free to ask more questions.",
                     "bye": "Goodbye!",
@@ -137,10 +148,7 @@ def interactive_chat(result):
                 type_text(f"  {responses.get(q.lower(), 'Ready for your question.')}", delay=0.03)
                 print()
                 continue
-            # Show the question being asked
-            if len(questions) > 1:
-                print()
-                type_text(f"  Q{i+1}: {q}", delay=0.02)
+
             correlation_id = new_correlation_id()
             trace = Trace(correlation_id, request_type="interactive_chat")
             log(logger, "info", f"question: {q}", correlation_id, stage="chat")
@@ -153,28 +161,21 @@ def interactive_chat(result):
                 trace.finish_and_save()
                 continue
             trace_path = trace.finish_and_save()
-            # Clean answer: extract just the meaningful part
+
+            # Clean answer
             text = answer.answer_text.strip()
-            # Remove redundant question echo from mock LLM answers
             if "Question:" in text:
                 text = text.split("Question:")[0].strip()
-            # Remove raw chunk text that appears before the real answer
             lines = [l.strip() for l in text.split("\n") if l.strip()]
             if lines:
                 text = lines[-1] if len(lines) > 1 else lines[0]
+
             print()
-            if len(questions) > 1:
-                type_text(f"  A{i+1}: {text}", delay=0.03)
-                print()
-                if answer.cited_chunk_ids:
-                    type_text(f"          Sources: {', '.join(answer.cited_chunk_ids)}", delay=0.02)
-                type_text(f"          Trace:   {trace_path}", delay=0.02)
-            else:
-                type_text(f"  {text}", delay=0.03)
-                print()
-                if answer.cited_chunk_ids:
-                    type_text(f"  Sources: {', '.join(answer.cited_chunk_ids)}", delay=0.02)
-                type_text(f"  Trace:   {trace_path}", delay=0.02)
+            type_text(f"  {text}", delay=0.03)
+            print()
+            if answer.cited_chunk_ids:
+                type_text(f"  Sources: {', '.join(answer.cited_chunk_ids)}", delay=0.02)
+            type_text(f"  Trace:   {trace_path}", delay=0.02)
             print()
 
 

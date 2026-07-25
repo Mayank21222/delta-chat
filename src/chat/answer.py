@@ -27,15 +27,18 @@ between two revisions of such a drawing.
 You have been given context chunks from two P&ID revisions and a delta report. \
 Each chunk is labeled with an ID like [pid_a:1:441] or [delta:D0001].
 
-Rules:
-- Use ALL information in the context to answer the question. Read every chunk carefully.
-- Every factual claim MUST end with a citation in square brackets using the exact \
+CRITICAL INSTRUCTIONS:
+1. Read EVERY chunk in the context carefully before answering.
+2. Delta entries (labeled delta:) describe what changed between revisions. \
+If a question asks "what changed" or "was X removed/added/modified", look at the delta chunks.
+3. If you see a delta entry that answers the question, cite it directly. \
+For example, if delta:D0004 says 'Removed: "MECHANICAL"' and delta:D0005 says 'Removed: "INTERLOCK"', \
+then the mechanical interlock WAS removed.
+4. Every factual claim MUST end with a citation in square brackets using the exact \
 chunk id given in the context, e.g. "The setpoint is 230.0 bar(g) [delta:D0001]".
-- If the context does not contain the answer, say exactly: \
-"Not found in the provided documents." Do not guess.
-- Be concise. This is an engineering review tool, not a chat companion.
-- If you see delta entries (labeled delta:), they describe what changed between revisions. \
-Use them to answer "what changed" questions."""
+5. ONLY say "Not found in the provided documents." if you have genuinely checked \
+ALL provided chunks and none contain relevant information.
+6. Be concise. This is an engineering review tool, not a chat companion."""
 
 CITATION_RE = re.compile(r"\[(pid_[ab]:[^\]]+|delta:[^\]]+)\]")
 
@@ -57,7 +60,7 @@ def _build_context(retrieved: list[tuple[Chunk, float]]) -> str:
     return "\n\n".join(lines)
 
 
-def ask(question: str, index: RetrievalIndex, llm: LLMClient, trace: Trace, top_k: int = 15) -> ChatAnswer:
+def ask(question: str, index: RetrievalIndex, llm: LLMClient, trace: Trace, top_k: int = 20) -> ChatAnswer:
     with trace.span("retrieve", top_k=top_k) as span:
         retrieved = index.search(question, top_k=top_k)
         span.metadata["num_retrieved"] = len(retrieved)

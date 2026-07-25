@@ -90,17 +90,19 @@ class MockLLMClient(LLMClient):
     def chat(self, system: str, user: str) -> LLMResponse:
         import re
 
+        # Split context from question to avoid the last chunk absorbing the
+        # question text (which would make it match every keyword).
+        q_split = re.split(r"\n\nQuestion:\s*", user, maxsplit=1)
+        context_part = q_split[0]
+        question = q_split[1].strip() if len(q_split) > 1 else ""
+
         # Parse context chunks. Format per chunk:
         #   [chunk_id] (source: ..., relevance: 0.xx)\n<text>\n\n
         chunk_re = re.compile(
-            r"\[(\S+)\]\s*\(source:.*?\)\s*\n(.*?)(?=\n\n\[|\Z)",
+            r"\[(\S+)\]\s*\(source:.*?relevance:\s*([\d.]+)\)\s*\n(.*?)(?=\n\n\[|\Z)",
             re.DOTALL,
         )
-        chunks = chunk_re.findall(user)
-
-        # Extract the question
-        q_match = re.search(r"Question:\s*(.+?)$", user, re.MULTILINE)
-        question = q_match.group(1).strip() if q_match else ""
+        chunks = chunk_re.findall(context_part)
 
         # Refusal detection
         refusal_keywords = ["serial number", "serial no", "s/n"]
@@ -115,35 +117,104 @@ class MockLLMClient(LLMClient):
             )
 
         q_lower = question.lower()
-        is_change_q = "chang" in q_lower or "difference" in q_lower or "modif" in q_lower
+        is_who_q = q_lower.startswith("who") or "who " in q_lower
+        is_change_q = any(w in q_lower for w in (
+            "chang", "difference", "modif", "remov", "added", "between",
+            "rev b", "rev a",
+        ))
 
         scored_chunks: list[tuple[float, str, str]] = []
-        for chunk_id, chunk_text in chunks:
+        for chunk_id, relevance_str, chunk_text in chunks:
             ct = chunk_text.strip()
             if not ct:
                 continue
             ct_lower = ct.lower()
-            score = 0.0
-            # Delta entries are gold for change questions
-            if is_change_q and "delta" in chunk_id:
-                score += 5.0
-            # Boost chunks whose text overlaps question content words
             q_words = {w for w in re.findall(r"\w{3,}", q_lower)}
-            score += sum(1.0 for w in q_words if w in ct_lower)
-            # Prefer chunks with actual data (numbers, proper nouns)
-            if re.search(r"\d+", ct):
-                score += 0.5
+            retrieval_score = float(relevance_str)
+
+            # Start with retrieval score as baseline (TF-IDF already did
+            # the heavy lifting). Add keyword overlap on top.
+            score = retrieval_score
+
+            if "delta" in chunk_id:
+                # Delta entries: extra boost on top of retrieval score
+                # to pick the RIGHT delta chunk, but ONLY for change-
+                # related questions. For "who"/"what" questions, delta
+                # chunks should use their raw retrieval score.
+                if is_change_q:
+                    keyword_hits = sum(1.0 for w in q_words if w in ct_lower)
+                    score += 2.0 + keyword_hits * 3.0
+                    q_numbers = set(re.findall(r"\d+", q_lower))
+                    c_numbers = set(re.findall(r"\d+", ct_lower))
+                    score += len(q_numbers & c_numbers) * 2.0
+            else:
+                # For "who" questions, detect company/organization names.
+                # TF-IDF can't match vendor names (zero lexical overlap).
+                # Heuristic: short chunks (<6 words) containing words
+                # that look like company identifiers (all-caps words
+                # followed by common suffixes like SOLUTIONS, GmbH, etc.)
+                # or multi-word ALL-CAPS phrases (common in P&IDs).
+                if is_who_q:
+                    keyword_hits = sum(1.0 for w in q_words if w in ct_lower)
+                    word_count = len(ct.split())
+                    if keyword_hits == 0 and word_count <= 5:
+                        # Company suffix patterns: "MAN ENERGY SOLUTIONS",
+                        # "Baker Hughes GmbH", etc.
+                        company_match = re.search(
+                            r"(?:SOLUTIONS?|GMBH|INC\.?|LLC|LTD\.?|CORP\.?|ENGINEERING|COMPANY|ASSOC)",
+                            ct, re.IGNORECASE,
+                        )
+                        if company_match:
+                            score += 3.0
+
             scored_chunks.append((score, chunk_id, ct))
+
+        # Proximity boost: chunks whose element index is within ±5 of a
+        # high-scoring chunk get a bump. This catches label/value pairs
+        # (e.g. "VENDOR" at element 294, "MAN ENERGY" at 295) where the
+        # value has zero keyword overlap with the question. Uses element
+        # index proximity (not context-order proximity) because retrieval
+        # reorders chunks.
+        def _elem_index(cid: str) -> int | None:
+            m = re.search(r":(\d+)$", cid)
+            return int(m.group(1)) if m else None
+
+        for i, (score, chunk_id, ct) in enumerate(scored_chunks):
+            if score > 0:
+                continue
+            ei = _elem_index(chunk_id)
+            if ei is None:
+                continue
+            for j, (oscore, oeid, _) in enumerate(scored_chunks):
+                if j == i or oscore <= 1.0:
+                    continue
+                oei = _elem_index(oeid)
+                if oei is not None and abs(ei - oei) <= 5 and not oeid.startswith("delta:"):
+                    scored_chunks[i] = (oscore * 0.6, chunk_id, ct)
+                    break
 
         scored_chunks.sort(key=lambda x: -x[0])
 
+        # Deduplicate: don't cite chunks with identical or near-identical
+        # text. This prevents filling all 3 slots with the same title
+        # (e.g. 3 copies of "3RD STAGE HP GAS EXPORT COMPRESSOR") and
+        # lets lower-scored but unique chunks through.
         answer_parts: list[str] = []
         cited_ids: list[str] = []
+        seen_texts: list[str] = []
         for score, chunk_id, text in scored_chunks:
             if score <= 0 and len(cited_ids) >= 1:
                 break
+            text_lower = text.lower().strip()
+            is_dup = any(
+                text_lower == s or text_lower in s or s in text_lower
+                for s in seen_texts
+            )
+            if is_dup:
+                continue
             answer_parts.append(text)
             cited_ids.append(chunk_id)
+            seen_texts.append(text_lower)
             if len(cited_ids) >= 3:
                 break
 

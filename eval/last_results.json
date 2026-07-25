@@ -22,9 +22,23 @@
     "delta_fp": 0,
     "delta_fn": 0,
     "chat_groundedness": 1.0,
-    "chat_correctness": 0.4,
+    "chat_correctness": 1.0,
     "chat_refusal_accuracy": 1.0,
     "num_delta_entries": 7,
     "num_gt_entries": 7
+  },
+  {
+    "pair_id": "export_gas_compressor_identical_revisions",
+    "delta_f1": 0.0,
+    "delta_precision": 0.0,
+    "delta_recall": 0.0,
+    "delta_tp": 0,
+    "delta_fp": 0,
+    "delta_fn": 0,
+    "chat_groundedness": 1.0,
+    "chat_correctness": 0.3333333333333333,
+    "chat_refusal_accuracy": 0.6666666666666666,
+    "num_delta_entries": 0,
+    "num_gt_entries": 0
   }
 ]
