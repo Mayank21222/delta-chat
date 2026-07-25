@@ -24,13 +24,18 @@ SYSTEM_PROMPT = """You are a grounded technical assistant answering questions ab
 piping & instrumentation drawings (P&IDs) and a delta report describing changes \
 between two revisions of such a drawing.
 
+You have been given context chunks from two P&ID revisions and a delta report. \
+Each chunk is labeled with an ID like [pid_a:1:441] or [delta:D0001].
+
 Rules:
-- Only use information in the provided context. Never use outside knowledge.
+- Use ALL information in the context to answer the question. Read every chunk carefully.
 - Every factual claim MUST end with a citation in square brackets using the exact \
 chunk id given in the context, e.g. "The setpoint is 230.0 bar(g) [delta:D0001]".
 - If the context does not contain the answer, say exactly: \
 "Not found in the provided documents." Do not guess.
-- Be concise. This is an engineering review tool, not a chat companion."""
+- Be concise. This is an engineering review tool, not a chat companion.
+- If you see delta entries (labeled delta:), they describe what changed between revisions. \
+Use them to answer "what changed" questions."""
 
 CITATION_RE = re.compile(r"\[(pid_[ab]:[^\]]+|delta:[^\]]+)\]")
 
@@ -52,7 +57,7 @@ def _build_context(retrieved: list[tuple[Chunk, float]]) -> str:
     return "\n\n".join(lines)
 
 
-def ask(question: str, index: RetrievalIndex, llm: LLMClient, trace: Trace, top_k: int = 8) -> ChatAnswer:
+def ask(question: str, index: RetrievalIndex, llm: LLMClient, trace: Trace, top_k: int = 15) -> ChatAnswer:
     with trace.span("retrieve", top_k=top_k) as span:
         retrieved = index.search(question, top_k=top_k)
         span.metadata["num_retrieved"] = len(retrieved)
